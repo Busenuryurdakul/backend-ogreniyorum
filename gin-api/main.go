@@ -9,20 +9,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Ortak urun listesi
+// Ortak ürün listesi
 var urunler = []string{
 	"Bilgisayar",
 	"Telefon",
 	"Tablet",
 }
 
-// Eszamanli isteklerde veriyi korur
+// Eş zamanlı isteklerde veriyi korur
 var mu sync.Mutex
 
 func main() {
-	router := gin.Default()
 
-	// GET - Urunleri listele
+	// Gin uygulamasını oluştur
+	// Performans testi için istek loglaması kapalı
+	router := gin.New()
+
+	// Beklenmeyen hatalarda sunucuyu korur
+	router.Use(gin.Recovery())
+
+	// GET - Ürünleri listele
 	router.GET("/urunler", func(c *gin.Context) {
 		mu.Lock()
 		liste := append([]string{}, urunler...)
@@ -31,7 +37,7 @@ func main() {
 		c.JSON(http.StatusOK, liste)
 	})
 
-	// POST - Yeni urun ekle
+	// POST - Yeni ürün ekle
 	router.POST("/urunler", func(c *gin.Context) {
 		var yeniUrun struct {
 			Ad string `json:"ad"`
@@ -39,6 +45,7 @@ func main() {
 
 		if err := c.ShouldBindJSON(&yeniUrun); err != nil ||
 			yeniUrun.Ad == "" {
+
 			c.JSON(http.StatusBadRequest, gin.H{
 				"hata": "Gecersiz urun bilgisi",
 			})
@@ -55,7 +62,7 @@ func main() {
 		})
 	})
 
-	// PUT - Mevcut urunu guncelle
+	// PUT - Mevcut ürünü güncelle
 	router.PUT("/urunler", func(c *gin.Context) {
 		var veri struct {
 			EskiAd string `json:"eskiAd"`
@@ -64,6 +71,7 @@ func main() {
 
 		if err := c.ShouldBindJSON(&veri); err != nil ||
 			veri.EskiAd == "" || veri.YeniAd == "" {
+
 			c.JSON(http.StatusBadRequest, gin.H{
 				"hata": "Gecersiz urun bilgisi",
 			})
@@ -91,7 +99,7 @@ func main() {
 		})
 	})
 
-	// DELETE - Urun sil
+	// DELETE - Mevcut ürünü sil
 	router.DELETE("/urunler", func(c *gin.Context) {
 		var veri struct {
 			Ad string `json:"ad"`
@@ -99,6 +107,7 @@ func main() {
 
 		if err := c.ShouldBindJSON(&veri); err != nil ||
 			veri.Ad == "" {
+
 			c.JSON(http.StatusBadRequest, gin.H{
 				"hata": "Gecersiz urun bilgisi",
 			})
@@ -110,6 +119,7 @@ func main() {
 
 		for i, urun := range urunler {
 			if urun == veri.Ad {
+
 				urunler = append(
 					urunler[:i],
 					urunler[i+1:]...,
@@ -125,9 +135,10 @@ func main() {
 		})
 	})
 
+	// Sunucuyu başlat
 	log.Println("Gin sunucusu 8081 portunda baslatiliyor...")
 
 	if err := router.Run(":8081"); err != nil {
-		log.Println("Sunucu hatasi:", err)
+		log.Fatal("Sunucu hatasi:", err)
 	}
 }
