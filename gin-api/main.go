@@ -9,12 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Ortak urun listesi
 var urunler = []string{
 	"Bilgisayar",
 	"Telefon",
 	"Tablet",
 }
 
+// Eszamanli isteklerde veriyi korur
 var mu sync.Mutex
 
 func main() {
@@ -76,10 +78,44 @@ func main() {
 				urunler[i] = veri.YeniAd
 
 				c.JSON(http.StatusOK, gin.H{
-					"mesaj": "Urun basariyla guncellendi",
+					"mesaj":  "Urun basariyla guncellendi",
 					"eskiAd": veri.EskiAd,
 					"yeniAd": veri.YeniAd,
 				})
+				return
+			}
+		}
+
+		c.JSON(http.StatusNotFound, gin.H{
+			"hata": "Urun bulunamadi",
+		})
+	})
+
+	// DELETE - Urun sil
+	router.DELETE("/urunler", func(c *gin.Context) {
+		var veri struct {
+			Ad string `json:"ad"`
+		}
+
+		if err := c.ShouldBindJSON(&veri); err != nil ||
+			veri.Ad == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"hata": "Gecersiz urun bilgisi",
+			})
+			return
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		for i, urun := range urunler {
+			if urun == veri.Ad {
+				urunler = append(
+					urunler[:i],
+					urunler[i+1:]...,
+				)
+
+				c.Status(http.StatusNoContent)
 				return
 			}
 		}
